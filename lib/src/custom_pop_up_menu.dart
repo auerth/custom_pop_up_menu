@@ -80,97 +80,97 @@ class _CustomPopupMenuState extends State<CustomPopupMenu> {
   bool _canResponse = true;
 
   _showMenu() {
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_parentBox == null || _parentBox!.hasSize == false) return;
+      if (_parentBox == null || !_parentBox!.hasSize) return;
+      if (_childBox == null || !_childBox!.hasSize) return;
+      Widget arrow = ClipPath(
+        child: Container(
+          width: widget.arrowSize,
+          height: widget.arrowSize,
+          color: widget.arrowColor,
+        ),
+        clipper: _ArrowClipper(),
+      );
 
-    Widget arrow = ClipPath(
-      child: Container(
-        width: widget.arrowSize,
-        height: widget.arrowSize,
-        color: widget.arrowColor,
-      ),
-      clipper: _ArrowClipper(),
-    );
-
-    _overlayEntry = OverlayEntry(
-      builder: (context) {
-        Widget menu = Center(
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: _parentBox!.size.width - 2 * widget.horizontalMargin,
-              minWidth: 0,
-            ),
-            child: CustomMultiChildLayout(
-              delegate: _MenuLayoutDelegate(
-                anchorSize: _childBox!.size,
-                anchorOffset: _childBox!.localToGlobal(
-                  Offset(-widget.horizontalMargin, 0),
-                ),
-                verticalMargin: widget.verticalMargin,
-                position: widget.position,
+      _overlayEntry = OverlayEntry(
+        builder: (context) {
+          Widget menu = Center(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: _parentBox!.size.width - 2 * widget.horizontalMargin,
+                minWidth: 0,
               ),
-              children: <Widget>[
-                if (widget.showArrow)
-                  LayoutId(
-                    id: _MenuLayoutId.arrow,
-                    child: arrow,
+              child: CustomMultiChildLayout(
+                delegate: _MenuLayoutDelegate(
+                  anchorSize: _childBox!.size,
+                  anchorOffset: _childBox!.localToGlobal(
+                    Offset(-widget.horizontalMargin, 0),
                   ),
-                if (widget.showArrow)
-                  LayoutId(
-                    id: _MenuLayoutId.downArrow,
-                    child: Transform.rotate(
-                      angle: math.pi,
+                  verticalMargin: widget.verticalMargin,
+                  position: widget.position,
+                ),
+                children: <Widget>[
+                  if (widget.showArrow)
+                    LayoutId(
+                      id: _MenuLayoutId.arrow,
                       child: arrow,
                     ),
-                  ),
-                LayoutId(
-                  id: _MenuLayoutId.content,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Material(
-                        child: widget.menuBuilder(),
-                        color: Colors.transparent,
+                  if (widget.showArrow)
+                    LayoutId(
+                      id: _MenuLayoutId.downArrow,
+                      child: Transform.rotate(
+                        angle: math.pi,
+                        child: arrow,
                       ),
-                    ],
+                    ),
+                  LayoutId(
+                    id: _MenuLayoutId.content,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Material(
+                          child: widget.menuBuilder(),
+                          color: Colors.transparent,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-        return Listener(
-          behavior: widget.enablePassEvent
-              ? HitTestBehavior.translucent
-              : HitTestBehavior.opaque,
-          onPointerDown: (PointerDownEvent event) {
-            Offset offset = event.localPosition;
-            // If tap position in menu
-            if (_menuRect.contains(
-                Offset(offset.dx - widget.horizontalMargin, offset.dy))) {
-              return;
-            }
-            _controller?.hideMenu();
-            // When [enablePassEvent] works and we tap the [child] to [hideMenu],
-            // but the passed event would trigger [showMenu] again.
-            // So, we use time threshold to solve this bug.
-            _canResponse = false;
-            Future.delayed(Duration(milliseconds: 300))
-                .then((_) => _canResponse = true);
-          },
-          child: widget.barrierColor == Colors.transparent
-              ? menu
-              : Container(
-                  color: widget.barrierColor,
-                  child: menu,
-                ),
-        );
-      },
-    );
-    if (_overlayEntry != null) {
-      Overlay.of(context)!.insert(_overlayEntry!);
-    }});
+          );
+          return Listener(
+            behavior: widget.enablePassEvent
+                ? HitTestBehavior.translucent
+                : HitTestBehavior.opaque,
+            onPointerDown: (PointerDownEvent event) {
+              Offset offset = event.localPosition;
+              // If tap position in menu
+              if (_menuRect.contains(
+                  Offset(offset.dx - widget.horizontalMargin, offset.dy))) {
+                return;
+              }
+              _controller?.hideMenu();
+              // When [enablePassEvent] works and we tap the [child] to [hideMenu],
+              // but the passed event would trigger [showMenu] again.
+              // So, we use time threshold to solve this bug.
+              _canResponse = false;
+              Future.delayed(Duration(milliseconds: 300))
+                  .then((_) => _canResponse = true);
+            },
+            child: widget.barrierColor == Colors.transparent
+                ? menu
+                : Container(
+                    color: widget.barrierColor,
+                    child: menu,
+                  ),
+          );
+        },
+      );
+      if (_overlayEntry != null) {
+        Overlay.of(context)!.insert(_overlayEntry!);
+      }
+    });
   }
 
   _hideMenu() {
@@ -184,7 +184,15 @@ class _CustomPopupMenuState extends State<CustomPopupMenu> {
     bool menuIsShowing = _controller?.menuIsShowing ?? false;
     widget.menuOnChange?.call(menuIsShowing);
     if (menuIsShowing) {
-      _showMenu();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _childBox = context.findRenderObject() as RenderBox?;
+        _parentBox =
+            Overlay.of(context)?.context.findRenderObject() as RenderBox?;
+        if (_parentBox == null || !_parentBox!.hasSize) return;
+
+        _showMenu();
+      });
     } else {
       _hideMenu();
     }
