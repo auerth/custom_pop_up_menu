@@ -80,6 +80,10 @@ class _CustomPopupMenuState extends State<CustomPopupMenu> {
   bool _canResponse = true;
 
   _showMenu() {
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_parentBox == null || _parentBox!.hasSize == false) return;
+
     Widget arrow = ClipPath(
       child: Container(
         width: widget.arrowSize,
@@ -166,7 +170,7 @@ class _CustomPopupMenuState extends State<CustomPopupMenu> {
     );
     if (_overlayEntry != null) {
       Overlay.of(context)!.insert(_overlayEntry!);
-    }
+    }});
   }
 
   _hideMenu() {
